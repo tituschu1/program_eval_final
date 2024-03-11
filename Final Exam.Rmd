@@ -1,0 +1,717 @@
+---
+title: "Final Exam"
+author: "Titus Chu 12324730"
+date: '2023-05-19'
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document:
+    df_print: paged
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Load Libraries, include=FALSE}
+# data manipulation
+suppressMessages(library(dplyr)) 
+suppressMessages(library(tidyverse))
+library(haven)
+library(ggplot2)
+library(tidyverse)
+library(knitr)
+
+library(kableExtra)
+library(broom)
+library(stargazer)
+library(AER)
+options(pillar.sigfig = 3)
+
+library(magrittr)
+library(lfe)
+library(readstata13)
+library(foreign)
+library(plm)
+
+```
+
+
+
+# Question 1
+Answer the following questions based on your section.
+
+Section 03: Kleven, Henrik, Camille Landais, and Jakob Egholt Søgaard. 2019. “Children and gender inequality: Evidence from Denmark,” American Economic Journal: Applied Economics 11(4): 181—209.
+ 
+ 
+# Question 1.A
+Describe the research question in this paper in words. Explain, in words and math, the ideal experiment one might want to use to answer this question. Explain, in words and math, the naïve estimator. Provide three concrete examples of why the naïve estimator is unlikely to provide an unbiased parameter estimate in this setting, and explain whether each would bias your estimate upwards or downwards relative to the truth. **Word limit: 400 words**
+
+*Answer* 
+Research question : How does having children affect the career, earnings, and labor characteristics of male/female parents in Denmark? 
+
+Ideal Experiment for the research is a RCT that is then split into a difference-in-difference-in-difference (DDD):
+1) Randomly assign couples in Denmark into two groups. A treatment group that will have to have children and a control group that will not have any children.
+
+2) Track the career, earnings, and labor characteristic outcomes of father and mother in both groups over several years to get post first child (post) and pre first child (pre)
+
+3) Compare differences for treatment and control group, men and women, and before and after first child by using using DDD
+
+In math a DDD: 
+* $D_i=Treat$ and $D_i=Untreat$: Denotes if a individual $i$ did or did not have children
+
+* $S_i = Male$ and $S_i = Female$ Denotes if a individual $i$ is male or female
+
+* $T =Pre$ and $T = Post$ Denotes if a individual $i$ is in the pre first child period or post first child period
+
+
+* $y_i(D,S,T)$: the career outcome variable of interest (wage, hours worked, total earnings etc) for individual $i$ given if they had kids, was male or female, and was in time period before or after they had children.
+
+This yields: $\hat{\tau}^{DDD} = [(\bar{Y}(Treat,Post,Male) - \bar{Y}(Treat,Pre,Male))- (\bar{Y}(Untreat,Post,Male) - \bar{Y}(Untreat,Pre,Male))] - [(\bar{Y}(Treat,Post,Female) - \bar{Y}(Treat,Pre,Female)) - (\bar{Y}(Untreat,Post,Female) - \bar{Y}(Untreat,Pre,Female))]$
+
+Via a regression we can run:
+
+$Y_{i,jt} = \beta_0 + \beta_1 Treat_i + \beta_2 Post_t + \beta_3 Male_j + \beta_4 (Treated_i * Post_t) + \beta_5 (Post_t *Male_j) + \beta_6 (Treat_i * Male_j) + \tau(Treated_i * Post_t * Male_j) + \epsilon_{ijt}$
+
+
+If we use naïve estimator, we  compare average career characterstics (wage, hours worked, total earnings etc) of women who had children to men who had children as our estimate of the impact of children on women outcomes vs. men outcomes. In math:
+
+$$\tau^{naive} =\overline{Y(S=Male, D=Treated)} - \overline{Y(S=Female, D=Treated)} $$
+
+Naive estimator is unlikely to provide non-biased estimate because:
+
+1. Individuals who choose not to have children may be more career driven enjoy working more than those who choose to have children. This makes the naive estimator over-estimate the effect of children because people who choose to not have children will have better career outcomes and characterstics regardless.
+
+2. Individuals who choose to have children are those who tend to be wealthier who may focus less on their career because they have less incentive to make money. This makes the naive estimator over-estimate the effects of children because people with children might work less and have weaker career outcomes because they are wealtheir and care less about their monetary salary
+
+3. Individuals who have children are more driven to create and provide for their family. These individuals are driven to provide for their family and as a result work harder and have better labor characterstics than those who choose not to have children. This would make naive estimator under-estimate the effect of children because people who have children tend to work harder than those who do not have children.
+
+(398 words no math and notation)
+
+
+\newpage
+
+
+# Question 1.B
+Copy down the authors’ main regression specification (and be sure to list which equation number this is in the paper). Explain, in words and math, what treatment parameter the authors are recovering with their main specification. Does this approach recover the population average treatment effect? If yes, why? If no, why not? What assumptions are required for this regression to recover the causal effect of interest? Do you think these assumptions are likely to be satisfied in this context? Why or why not? Include references to evidence presented in the paper to support your conclusion. **Word limit: 400 words**
+
+*Answer* 
+```{r}
+
+knitr::include_graphics("reg 1.png")
+
+```
+
+The above is the main regression specification for the paper and it is listed as equation number 1. This regression is run separate for men and women where   $Y_{i,s,t}$ is the career outcome of interest (earnings, labor participation, hours worked wage rates) for individual $i$ of gender $g$ at year $s$ and event time$t$, which ranges from 5 years before $t=-5$ the birth of the first child $t=0$ to 10 years after $t=10$. This equation include a full set of event time dummies (first term on the right-hand side), age dummies (second term), and year dummies (third term). The treatment parameters the author want to recover by the equation is $\hat{\alpha}^g_t$ which describes the level effects on career outcome $Y$ of having their first child for individual $i$. The authors convert the level effect estimates to percentages by: $P^g_t \equiv \hat{\alpha}^g_t/E[\tilde{Y}^g_{i,s,t}|t]$ where $\tilde{Y}^g_{i,s,t}$ is the predicted outcome when only including age and year dummies, omitting the contribution of the event dummies. $P^g_t$ captures the year effect of children as a percentage of the counterfactual outcome absent children. The author then uses these values to define a child penalty on women relative to men at event time t as the regression was done seperatley for each gender:
+
+```{r}
+
+knitr::include_graphics("reg 2.png")
+
+```
+
+The above measures the percentage by which women are falling behind men due to children at event time $t$. 
+
+This approach is unlikely to recover the causal estimate of population average treatment effects. The method above relies on the assumption of parallel trends which means couples who had children follow the same trend as those who did not have children. This is not likely to be satisfied in the context as there is selection for groups of people choosing to have children or not have children. It can be the case that people who do not have children are more career focused and therefore will achieve better career outcomes regardless of the effect of children. We cannot be sure that selection bias is not there in the unobserved data and functional form of method. The paper states "... the event of having a first child generates sharp changes in labor market outcomes that are arguably orthogonal to unobserved determinants of those outcomes as they should evolve smoothly over time." While the argument is plausible, "arguably orthogonal to unobserved determinants" does not give pause that the assumptions are likely to hold in the real world. 
+
+(398 words)
+
+
+\newpage
+
+# Question 1.C
+Describe the main results of the paper. Include a discussion of (at a minimum) one table and one figure, in which you interpret the estimated coefficients and describe their magnitudes. What is the main policy take-away of the paper? **Word limit: 400 words**
+
+*Answer* 
+The main results of the paper show that impact of children on women is large and persistent across earnings while men are basically unaffected. The penalty of having children for women earnings is close to 20% when looking at outcomes 20 years later and is driven by labor force participation, hours worked, wage rates, and changes to occupation, sector, and firm choices. The authors also show that gender gap in earnings is becoming more and more explained by the effect of children rather than other factors. They also show generational effects where the gender roles and earnings of female grandparents affect the impact of children on women careers but not male grandparents.
+
+```{r}
+
+knitr::include_graphics("fig 1.png")
+
+```
+Panel A of Figure 1 shows immediatley after giving birth, earnings drop almost 30% for women parents compared to male parents and 10 years after birth of first child, women earn 19.4% less than men. Panel B, C, D breaks down this effect. Panel B shows hours worked, women parents work 9.7% less hours than male parents after 10 years. Panel C shows labor participation rates and we see that women participate on average 13% less than men do 10 years after first child birth. Panel D shows wage rate, women parents have wage rates 9.1% less than male parents after 10 years.
+
+```{r}
+
+knitr::include_graphics("fig 3.png")
+
+```
+Figure 3 shows type of role and jobs individuals take after birth of first child. Panel A shows that women parents compared to male parents 10 years after birth of first child have 5% lower occupational rank (1:unskilled to 5: manager) . Panel B shows probability of being a manager is 26% lower for women after 10 years. Panel C shows probability of working in the public sector (which has more family friendly jobs) is 12% higher for women parents than male parents after 10 years. Panel D shows probability of working in firms with female managers that have children (which indicates family friendly workplace) is 8% higher for women parents than male parents after 10 years.
+
+The paper does not discuss welfare and policy implications, however they mention that policy interventions may not be necessary as unequal pay is nowadays due to children and women may have comparative advantages in raising children. They also discuss how effects of children on income are driven by environmental factors such as culture, social norms and policies that target these norms may reduce the gender wage.
+
+
+(391 words)
+
+\newpage
+
+# Question 2
+An NGO in India, Farmer Improvement for Natural Agricultural Livelihoods with EXpectations About the Monsoon (FINALEXAM), helps farmers cope with uncertain monsoon rainfall by providing them with a forecast about the onset (start date) of the summer monsoon. They would like you to help them design a pilot program to demonstrate the effects of their monsoon forecast, which they are trying to roll out at scale.
+
+
+# Question 2.A
+FINALEXAM hypothesizes that providing farmers with a monsoon onset forecast will improve farm profits by leading farmers to grow more cash crops. Using the potential outcomes framework, describe the impact of treatment – receiving a monsoon forecast (binary) – on the share of land in cash crops (percent) at the farm level. Explain to FINALEXAM what the ideal experiment would be for estimating this effect. Describe the dataset you’d like to have to carry out this ideal experiment, and use math, words, and the potential outcomes framework to explain what you would estimate and how you would do so. Make sure to be clear about the unit of analysis (ie, what is i here?) **Word limit: 300 words**
+
+*Answer* 
+In the potential outcomes framework, we define for the farm level:
+
+* $y_i(1)$ and $y_i(0)$: the share of land in cash crops (percent) for farm i if they did or did not not receive a monsoon forecast
+* $D_i=1$ and $D_i=0$: Denotes if a farm $i$ did or did not receive a monsoon forecast from FINALEXAM
+
+It is impossible to measure individual impact of treatment $τ_i = y_i(1) - y_i(0)$, due to the fundamental problem of causal inference since we cannot simultaneously observe both $y_i(1)$ and $y_i(0)$ for a single farm $i$. Therefore we will instead estimate the Average Treatment Effect (ATE) at the farm level using a ideal RCT experiment: $τ^{ATE} =E[τ_i] = E[Y_i(1)-Y_i(0)] = E[Y_i(1)]-E[Y_i(0])$
+
+Indian farmers and their farms are randomly assigned to either a treatment group that receives a monsoon forecast or a control group that does not receive a monsoon forecast. The share of land in cash crops (percent) for each farm is recorded for all farms. We assume no defiers and enforce compliance with treatment. The ideal dataset include a monsoon forecast treatment indicator, share of land in cash crops and other covariates such as altitude, climate, soil nutrient levels etc. for each individual farm.
+
+* ATE via RCT: $τ^{ATE} =E[τ_i] = E[Y_i(1)-Y_i(0)] = E[Y_i(1)]-E[Y_i(0])$
+
+RCT allows us to estimate the ATE without bias because because when treatment $D$ is randomly assigned, $D$ is independent of $y_i(0)$ and $y_i(1)$. We can practically check for this using a balance test where we expect the coefficeints to be close to zero and not statistically significant. This means farms individual characteristics related to share of land in cash crops (covariates in dataset) does not influence the assignment of FINALEXAM monsoon forecast, therefore eliminating selection bias. We get:
+
+* $E[Y_i(1) \mid D_i=1]$ = $E[Y_i(1) \mid D_i=0]$ = $E[Y_i(1)]$
+* $E[Y_i(0) \mid D_i=1]$ = $E[Y_i(0) \mid D_i=0]$ = $E[Y_i(0)]$
+
+Therefore:
+
+* $τ^{ATE} = E[Y_i(1)]-E[Y_i(0)]$ = $E[Y_i(1) \mid D_i=1]$ - $E[Y_i(0) \mid D_i=0]$ =  $E[Y_i \mid D_i=1] - E[Y_i \mid D_i=0]$
+
+Hence:
+
+* $\hat{τ}^{ATE} =\overline{Y(1)}-\overline{Y(0)}$
+
+With a RCT, we can measure the ATE of a monsoon forecast on share of land in cash crops by comparing at the average share of land in cash crops between farms with monsoon forecasts and those without monsoon forecasts 
+
+(298 words without math and notation)
+
+\newpage
+
+# Question 2.B
+FINALEXAM have secured funding to run a randomized trial to test their hypothesis. However, their funder is worried about implementing an individually-randomized design. In particular, they are concerned that control group farmers may be less likely to grow cash crops if the treatment group is flooding the market with cash crops. Is this a problem for an RCT that is randomized at the farm level? If yes, explain why, and describe what this would do to your treatment effects relative to the truth. If no, explain why not. Assume for the remainder of Question II that everyone offered a monsoon forecast by FINALEXAM receives this forecast. **Word limit: 300 words**
+
+*Answer* 
+In an RCT that is randomized at the farm level, the concern raised by the funder about the control group farmers being influenced by the treatment group is a valid problem. This is violation of the The Stable Unit Treatment Value Assumption (SUTVA) and is known as "spillover effect" and can potentially impact the validity of the treatment effect estimates. Since control group farmers now are less likely to grow cash crops (hence a lower share of their land will be used for cash crops) as a result of treatment farmers being offered a monsoon forecast that increases treatment farmer's cash crop supply into the market. This will bias the treatment effect upwards for monsoon forecasts on share of land in cash crops (percent) for farms as control farmers will now have lower share of land in cash crops leading to a over-estimation of the monsoon forecast treatment effects on share of land used for cash crops production relative to the truth. 
+
+To mitigate this issue a cluster-randomized design can instead be used. Instead of randomizing individual farmers, the randomization would be done at the cluster level, where clusters are groups of farmers or geographical regions who's cash crop supply into the market have no effects between each geographic cluster. We could also implement a randomized saturation design as in part 2.C of this question to estimate the spillover effects.
+
+(230 words)
+
+\newpage
+
+# Question 2.C
+After listening to the funder’s feedback, FINALEXAM has decided that they are actually interested in studying how providing forecasts to some people in a district impacts cash cropping and farm profits for people who don’t get the forecast. The funder is excited about this too, and is willing to devote substantial funding to the project. Given a large budget, describe an RCT design that will allow you to measure treatment effects on both farms who get a forecast from FINALEXAM and farms who don’t. Make sure to describe any necessary steps, and clearly lay out any treatment arms. A cartoon/diagram may be helpful. Use words and math to explain what treatment parameters you can estimate with this design. Be sure to be clear about the comparisons you are making. **Word limit: 300 words**
+
+*Answer* 
+We are now interested in impacts cash cropping and farm profits, our outcome variable $Y_i$ can now be the change in share of cash crop farmland assuming larger portion of farmland used for cash crops leads to higher profits. We can implement a randomized saturation design RCT. We assume that the clusters are Indian districts and that they are disjoint (farm $i$’s potential outcome is unaffected by other-cluster units). Meaning where $d$ and $c$ represent different clusters, $Y_{i.c} \perp D_{j,d}$. 
+
+1. We randomly assign treatment saturation (what percentage of farms within a district get a monsoon forecast) $\pi_c$ among all districts $C$. We keep a pure control cluster from $C$ where $\pi_c =0$ (district where no farmers get monsoon forecasts) as baseline.
+
+2. Within each district, randomly assign $\pi_c$% of the farmers to receive monsoon forecasts. This gives $D_{i,c}$ for farmer $i$ in district $c$
+
+This gives us 3 treatment arms
+a) Treated farmers: Farms who received forecasts within certain districts that received monsoon forecast $D_{i,c} =1$
+b) Pure Controls (baseline): Farms within clusters that did not receive any forecast at all.  $D_{i,c} =0$ and $\pi_c =0$
+c) Within-cluster controls: Farms who didn't receive forecasts within certain clusters that received monsoon forecast from FINALEXAM. $D_{i,c} =0$ and $\pi_c >0$
+
+With this model can measure the following where $Y_{i,c}$ is a farm's profitability and share of cash crops :
+
+$\tau^{ITT}(\pi) = E[Y_{i,c} | D_{i,c} =1, \pi_c = \pi] - E[Y_{i,c} | D_{i,c} =0, \pi_c = 0]$
+Intent to treat measures the difference between the profitability from share of cash crops for farms who got a monsoon forecast vs. farms who never got a forecast and who's district never got forecasts. Because we assumed perfect compliance from 2.B, $ITT(\pi) = ATE(\pi)$ it is the ATE of saturation $\pi$
+
+$\tau^{SNT}(\pi) = E[Y_{i,c} | D_{i,c} =0, \pi_c = \pi] - E[Y_{i,c} | D_{i,c} =0, \pi_c = 0]$
+Spillover on the non-treated measures the difference profitability from share of cash crops for farms who never got a monsoon forecast in a district where some farms did receive some monsoon forecasts vs. farms who never got a forecast and who's district never got any forecasts.
+
+$\tau^{TCE}(\pi) = E[Y_{i,c} | \pi_c = \pi] - E[Y_{i,c} | D_{i,c} =0, \pi_c = 0]$
+Total Causal Effect measures cluster difference profitability from share of cash crops between treated and control districts
+
+(300 words no math)
+
+\newpage
+
+# Question 2.D
+Write down a regression equation that you would use to estimate these treatment parameters, and describe how you would interpret any coefficients you recover. Finally, describe how you would use your estimates to recommend to FINALEXAM whether they should scale their forecast program or not **Word limit: 300 words**
+
+*Answer* 
+$$Y_{i,c} = \alpha + \displaystyle\sum_{\pi \neq 0}\tau^{trt}D_{i,c} \cdot 1[\pi_c = \pi] + \displaystyle\sum_{\pi \neq 0}\tau^{ctrl}S_{i,c} \cdot 1[\pi_c = \pi] + \epsilon_{i,c}$$ 
+Where
+
+* $Y_{i.c}$ is the outcome in profitability from share of cash crops on farmland for farm $i$ in district $c$
+
+* $D_{i,c} \cdot 1[\pi_c = \pi]$ is a indicator for a farm that received a monsoon forecast in a district that had saturation $\pi_c$ (where $\pi_c$ of farmers farmers in district $c$ received monsoon forecasts)
+
+* $S_{i,c} \cdot 1[\pi_c = \pi]$ is a indicator for a farm that did not receive a monsoon forecasts in a district that had saturation $\pi_c$
+
+* $\epsilon_{i,c}$ is the error term.
+
+Interpreting the coefficients:
+
+* $\hat{\tau}^{ITT}(\pi) = \hat{\tau}^{trt}_{\pi}$ The $\hat{\tau}^{trt}_{\pi}$ coefficient measures the intent to treat, the difference between the cash crop share of land for farms who got a monsoon forecast vs. farms who never got a forecast and who's district never got forecasts.
+
+* $\hat{\tau}^{SNT}(\pi) = \hat{\tau}^{ctrl}_{\pi}$ The $\hat{\tau}^{ctrl}_{\pi}$ coefficient measures spillover on non-treated, the difference in cash crop share of land  for farms who never got a monsoon forecast in a district where some farms did receive some monsoon forecasts vs. farms who never got a forecast and who's district never got any forecasts.
+
+* $\alpha$ measures outcome in profitability from share of cash crops on farmland for farm for pure control group
+
+* $\hat{\tau}^{TCE}(\pi) = \hat{\tau}^{trt}_{\pi} + (1-\pi)\hat{\tau}^{ctrl}_{\pi}$. Gives the Total Causal Effect, the difference in each district's cash crop share of land in farms between different $\pi$ levels of saturation of treated and control districts. 
+
+The above regression's parameters are measured relative to pure controls (farms that did not receive any monsoon forecasts that were located in districts where no farms received forecasts).
+
+Assuming the goal of FINALEXAM is to improve farmer profitability via share of cash crops in districts, we look at TCE to see the total effect of monsoon forecasts had on farm profitability and cash crop share in districts. If the TCE is positive, data suggests we can introduce monsoon forecasts to raise profitability in the district as a whole and FINALEXAM should scale the initiative despite what negative/positive effects that ITT or SNT might be.
+
+(298 words without math and notation)
+
+# Question 3
+Movement for Adequate Recovery Of Owed Negative Subsidies (MAROONS) is an based NGO that is very concerned that wealthy households are not paying their fair share of property taxes. They are interested in understanding the consequences of a higher marginal property tax rate for the rich, and would like you to help them with their analysis.
+
+# Question 3.A
+MAROONS would like you to compare the average number of tax evaders among households facing a high marginal property tax rate (50%) against the number of tax evaders among households facing a low marginal property tax rate (15%). Describe this comparison in math and words. Under what conditions would this comparison estimate the causal effect of the marginal property tax rate on tax evasion? (You can think about the treatment of interest as “Do you have a high marginal property tax rate?”) Provide two concrete examples of reasons why this comparison may be problematic. **Word limit: 300 words**
+
+*Answer* 
+
+* Let $Y$ be a binary variable where $Y = 1$ indicates a household is a tax evader and $Y = 0$ otherwise.
+
+* Let $D$ be a binary variable where $D = 1$ indicates a household faces a high marginal property tax rate (50%) and $D = 0$ indicates a household faces a low marginal property tax rate (15%).
+
+We take the average number of tax evaders among households facing a high marginal property tax rate (50%) and subtract the average number of tax evaders among households facing a low marginal property tax rate (15%). In math:
+
+*  $τ^{naive} = E[Y|D= 1] - E[Y|D = 0] =\overline{Y(1)}-\overline{Y(0)}$ 
+
+For this naive comparison to give us the causal ATE effect of the marginal property tax rate on tax evasion, we would need all differences between the two groups to be “as good as random”. This implies that there is no selection bias between households facing a a high marginal property tax rate vs. low marginal property tax, which implies that treatment assignment of marginal tax rates is independent of potential outcomes of tax evasion and that there are homogeneous treatment effects between the two groups, meaning households in the two groups will have the same tax evasion behavior given changes in marginal property tax rates. 
+
+In math:
+
+* $E[Y_i(1) \mid D_i=1]$ = $E[Y_i(1) \mid D_i=0]$ = $E[Y_i(1)]$
+
+* $E[Y_i(0) \mid D_i=1]$ = $E[Y_i(0) \mid D_i=0]$ = $E[Y_i(0)]$
+
+Therefore:
+
+* $τ^{ATE} = E[Y_i(1)]-E[Y_i(0)] = E[Y_i(1) \mid D_i=1] - E[Y_i(0) \mid D_i=0] =  E[Y_i \mid D_i=1] - E[Y_i \mid D_i=0] = \overline{Y(1)}-\overline{Y(0)}$
+
+This comparison is problematic because households who have higher tax rates tend to have higher incomes which gives them more incentives to evade taxes as they have more monetary value to gain by evading taxEs. Households with higher marginal tax rates may also have access to more education and knowledge about the tax system, giving them more opportunities to evade taxes. These factors bias the average comparison between the two groups as differences between the two groups are not “as good as random”, it will not only be the marginal tax rate that drives the difference in average tax evasion but also these underlying factors.
+
+(298 words without math notation)
+
+\newpage
+
+# Question 3.B
+MAROONS gets it - this is not the best comparison. However, they have data on a bunch of other household characteristics: per-capita income, number of people, age of the household head, level of education of the household head, county of residence, and year the home was purchased. Describe, using math and words, a comparison between high and low marginal property tax rate households which leverages these data. Under what conditions would this comparison estimate the causal effect of the marginal property tax rate on tax evasion? Provide two concrete examples of reasons why this comparison may be problematic (different from what you described above).**Word limit: 300 words**
+
+*Answer* 
+
+A comparison between high and low marginal property tax rate households that leverages the covariates $X_i$ is a selection-on-observables design. This comparison estimates the causal effect of the marginal property tax rate on tax evasion if potential tax evasion outcomes are assumed to be independent of $D_i$ (which marignal tax rate the household has) after controlling for covaraites such as per-capita income, number of people etc in the dataset $Xi$. We also need the common support assumption, meaning that there are both treated and untreated units for each level of the covariates. A regression adjustment approach does this where by controlling for the covariates $X_i$ in the dataset above, we can achieve independence between potential tax evasion outcomes $Y_i$ and $D_i$. In math the above assumption and approach:
+
+* $Y_i \perp D_i|X_i$ which implies 
+
+* $E[\epsilon_i |D_i,X_i] = 0$
+
+* $E[\gamma X_i +\nu_i |D_i,X_i] = 0$
+
+* $Y_i = \alpha + \tau D_i + \gamma X_i + \nu_i$ 
+
+This regression allows us to compare average number of tax evaders between high (Treated) and low (Untreated) marginal property tax rate households and retrieve causal effect if assumption holds. Since:
+
+* $\bar{Y}_U = \alpha + \gamma \bar{X_U} + \nu_i$ 
+
+* $\bar{Y}_T = \alpha + \tau + \gamma\bar{X_T} + \nu_i$ 
+
+Therefore causal effect is the comparison:
+
+* $\hat{\tau} = (\bar{Y}_T -\bar{Y}_U ) - \hat{\gamma}(\bar{X_T} - \bar{X_U})$
+
+This approach furthermore relies on $\bar{X_T}$ being close to $\bar{X_U}$, meaning good overlap between $X_i$ controls for high and low marginal tax rate households. As well as assumed functional form that we have specified our regression where $D_i = E[D_i | X_i]$.
+
+This comparison is problematic because it is unlikely we are controlling for all data points via $X_i$ that affect whether a household receives low marignal tax rate or high marginal tax rate. It might be the case that culture  (which is not in dataset) play a role in determining what type of marginal tax rate house a household buys and that culture also influences liklihood of evading taxes. It might also be that unobservable characteristics like risk preference of household determines what marginal tax rate house a household has and also affects liklihood of tax evasion.
+
+(299 words without math)
+
+\newpage
+
+# Question 3.C
+MAROONS understands your concerns, but has some in-house machine learning experts. They tell you that they can use this same rich dataset to solve your issues. Do you agree? Why or why not? Be specific. **Word limit: 300 words**
+
+*Answer* 
+I do not agree with MAROONS that machine learning with the above dataset can solve all the issues. Machine learning is helpful in determining the most important variables to control for with the issue of selection on observable which controls to add to the selection on observable design as long as the varaibles are exogenous variables. However it is not the case that the variables in our dataset are all exogenous, for example per capita income is largely endogenous and determined by marginal tax rates. Furthermore, machine learning cannot help us with unobservable datapoints or help us retreive and construct data for variables we do not already have collected in the dataset. Therefore even with machine learning, our model will suffer from unobservables that are difficult or impossible to measure in our dataset and will lead to a bias and non-causal estimate of proprety marginal tax rates on average number of tax evading households.
+
+Machine learning models are also good at creating predictions using our data but are not great at generating causal estimations. Therefore with machine learning models applied to our data, the algorithims might be able to generate a model that predicts average number of tax evasions for households well but are generally very unstable and as a result it is impossible to interpret the function. Given we cannot interpret the function of machine learning, machine learning will not give us any causal estimations of property marginal tax rate on average number of tax evasion households which is what we are fundamentally looking for in 3.B. 
+
+
+(258 words)
+
+\newpage
+
+# Question 3.D
+MAROONS likes your idea. While they won’t be able to run an experiment – they are, after all, not the government and therefore don’t set property taxes – they tell you that it reminds them of something the government actually does. Nobody understands the government’s full algorithm for setting taxes, but for counties in California, households who have owned their homes starting in 1978 or earlier face the 15% tax rate, while households who bought their homes in 1979 or later face the 50% tax rate. (This isn’t exactly how it works in real life, but Proposition 13 does exist and, if anything, is even dumber than this). MAROONS would like to know whether you can use California as a test case. Describe, in math and words, the research design you would use to leverage this new information. Be sure to include a regression equation. Under which conditions would this approach estimate the causal effect of marginal property tax rates on tax evasion? For whom is this causal effect identified?  **Word limit: 300 words**
+
+*Answer* 
+We can use a regression discontinuity deisgn (RDD) approach.
+
+Adding on previous notation:
+* $X_i$ = running variable, the year of home purchase. 
+* $c$ is the cutoff year of 1979
+
+With the policy described in the question we assume sharp cutoff: $Pr(D_i=1 | X_i \geq c) = 1$ and $Pr(D_i=1 | X_i < c) = 0$
+
+To implement an RDD, we can focus on a narrow bandwidth around the cutoff year (1979) and compare households just on either side of the cutoff. Specifically, we would compare the tax evasion rates of households who bought their homes just before and just after 1979. In math this means focusing on a narrow band around:
+
+$\hat{\tau}^{SRD} = E[Y_i(D_i=1)-Y_i(D_i=0) | X_i = c]$ where $c = 1979$
+
+Given we cannot observe $Pr(D_i=1 | X_i < c) $ and $Pr(D_i= | X_i \geq c) = 0$ at exactly $c$ we observe 
+$$\displaystyle\lim_{x \downarrow c} E[Y_i(1) | X_i = x] - \displaystyle\lim_{x \uparrow c} E[Y_i(0) | X_i = x]$$
+
+For model to estimate the causal effect of marginal property tax rates on tax evasion relies on the assumption that household units around the cutoff $c=1979$ are as good as randomly assigned, meaning that all observed and unobserved determinants of $Y_i$ the tax evasion rate other than marginal tax rate $D_i$ are smooth and continuous at 1979. In math this means:
+* $E[Y_i(D_i=1) | X_i = x]$ and $E[Y_i(D_i=0) | X_i = x]$ are continious in x.
+
+* $\hat{\tau}^{SRD} = E[Y_i(D_i=1)-Y_i(D_i=0) | X_i = c] = \displaystyle\lim_{x \downarrow c} E[Y_i(1) | X_i = x] - \displaystyle\lim_{x \uparrow c} E[Y_i(0) | X_i = x]$
+
+If this holds, this gives us the causal effect of marginal property tax rates on tax evasion for the household units that purchased houses that are right at the cutoff at year 1979. While this assumption fundamentally unprovable, we can later use manipulation and covariate smoothness tests to check if there is evidence for the validity of the assumption.
+
+Let h be the chosen bandwidth size for household units around $c=1979$:
+$\hat{\tau}^{SRD} = \bar{Y}_i(D_i=1; c\leq X_i \leq c + h)-\bar{Y}_i(D_i=0 ; c-h \leq X_i < c)$ 
+
+We can do this via a regression equation where we also allow for slope changes for our running variable, year of house purchase:
+
+$Y_i = \alpha + \tau D_i + \beta_1(X_i-c) + \beta_2(X_i-c)D_i + \epsilon_i$ for $c-h \leq X_i \leq c+h$ where h is the chosen bandwidth and $D_i = 1[X_i \geq c]$ 
+
+$\tau $ captures the causal effect of interest, representing the difference in tax evasion rates between the high tax rate group (homes purchased in 1979 or later) and the low tax rate group (homes purchased before 1979)
+
+(294 no math)
+
+\newpage
+
+# Question 3.E
+MAROONS likes this idea, and are willing to share data with you to try this out. Use the dataset contained in final_exam_2023.csv. What empirical tests would you like to perform, prior to attempting to estimate the effect of marginal tax rates on tax evasion, to provide evidence in support of the identifying assumption(s)? Perform at least two tests (hint: these should be simple graphical exercises). Do this separately for the three California counties in your dataset. What do they tell you about the validity of the identifying assumption(s) in each county? **Word limit: 300 words**
+
+*Answer* 
+
+```{r, include=FALSE}
+df <- read_csv("final_exam_2023.csv")
+```
+
+
+I would like to perform manipulation tests that plot out the distribution of house purchases for each year in our dataset to see if there is bunching or sorting around our cutoff year $c=1979$. I would also like to peform a covariate smoothness test by looking at other observable variables around our cutoff year $c=1979$ to ensure there is no discontinuity for other pre-determined covariates around $c$. These two tests provide evidence to support identifying assumption that household units purchased around the cutoff are as good as random and covariates except for marginal tax rate are smooth around the cutoff.
+
+
+
+```{r}
+df %>%
+  filter(county == "YOLO")  %>%
+  group_by(year_of_home_purchase ) %>%
+  ggplot(aes(x = year_of_home_purchase), color = as.factor(county)) + 
+  geom_histogram(aes(y = ..density..), binwidth=0.5)+ 
+  geom_vline(xintercept=1979,
+            color="blue", linetype="dashed", size=1) +
+  xlab("Year of Home Purchase") +
+  ylab("Density") +
+  ggtitle("Maniupation Test of County YOLO: Density of home purchases") 
+```
+
+```{r}
+df %>%
+  filter(county == "ALAMEDA")  %>%
+  group_by(year_of_home_purchase ) %>%
+  ggplot(aes(x = year_of_home_purchase), color = as.factor(county)) + 
+  geom_histogram(aes(y = ..density..), binwidth=0.5)+ 
+  geom_vline(xintercept=1979,
+            color="blue", linetype="dashed", size=1) +
+  xlab("Year of Home Purchase") +
+  ylab("Density") +
+  ggtitle("Maniupation Test of County ALAMEDA: Density of home purchases") 
+```
+
+```{r}
+df %>%
+  filter(county == "SANTA CLARA")  %>%
+  group_by(year_of_home_purchase ) %>%
+  ggplot(aes(x = year_of_home_purchase), color = as.factor(county)) + 
+  geom_histogram(aes(y = ..density..), binwidth=0.5)+ 
+  geom_vline(xintercept=1979,
+            color="blue", linetype="dashed", size=1) +
+  xlab("Year of Home Purchase") +
+  ylab("Density") +
+  ggtitle("Maniupation Test of County SANTA CLARA: Density of home purchases") 
+```
+
+
+
+
+
+```{r}
+
+df_yolo_covar <- df %>%
+  filter(county == "YOLO")  %>%
+  group_by(year_of_home_purchase ) %>%
+  summarise(m_household_income = mean(household_income), 
+            m_marginal_property_tax_rate = mean(marginal_property_tax_rate),
+            m_evade_tax = mean(evades_taxes_yn))
+
+plot(df_yolo_covar$year_of_home_purchase, 
+     df_yolo_covar$m_household_income, 
+     main = "Covariate Smoothness Test of County YOLO: Household income \n throughout home purchase years", 
+     xlab = "Year of House Purchase",
+     ylab = "Household income")
+abline(v = 1979)  
+
+```
+
+
+```{r}
+
+df_alameda_covar <- df %>%
+  filter(county == "ALAMEDA")  %>%
+  group_by(year_of_home_purchase ) %>%
+  summarise(m_household_income = mean(household_income), 
+            m_marginal_property_tax_rate = mean(marginal_property_tax_rate),
+            m_evade_tax = mean(evades_taxes_yn))
+
+plot(df_alameda_covar$year_of_home_purchase, 
+     df_alameda_covar$m_household_income, 
+     main = "Covariate Smoothness Test of County ALAMEDA: Household income \n throughout home purchase years", 
+     xlab = "Year of House Purchase",
+     ylab = "Household income")
+abline(v = 1979)  
+
+```
+
+```{r}
+
+df_satac_covar <- df %>%
+  filter(county == "SANTA CLARA")  %>%
+  group_by(year_of_home_purchase ) %>%
+  summarise(m_household_income = mean(household_income), 
+            m_marginal_property_tax_rate = mean(marginal_property_tax_rate),
+            m_evade_tax = mean(evades_taxes_yn))
+
+plot(df_satac_covar$year_of_home_purchase, 
+     df_satac_covar$m_household_income, 
+     main = "Covariate Smoothness Test of County SANTA CLARA: Household income \n throughout home purchase years", 
+     xlab = "Year of House Purchase",
+     ylab = "Household income")
+abline(v = 1979)  
+
+```
+
+From the manipulation tests on each county, we can see for counties ALAMEDA and YOLO, distribution of house purchases around cutoff year of 1979 is relativley smoooth. This is not the case for county SANTA CLARA which shows a dropoff in house purchases at our cutoff. These graphs suggest that the validility of the identifying RDD assumption seem to hold for ALAMEDA and YOLO but not for SANTA CLARA. Furthermore when we look at covariate tests, we can see that household income tends to move smoothly upward for counties ALAMEDA and YOLO while for county SANTA CLARA, we see a discrete drop in household income around the cutoff year. The covariate test on household income suggests that the identifying assumption for RDD holds for ALAMEDA and YOLO but not for SANTA CLARA. It is worth noting that we can only peform these test on observables, it cannot rule out the possibility of discontinuous changes in unobservables and cannot prove the RDD assumption.
+
+(262 words without graphs and code)
+
+\newpage
+
+# Question 3.F
+For the county/counties where you think you can estimate valid causal effects, plot the relationship between the year of home purchase and the probability of having a high marginal tax rate, separately for each county. (Hint: it may be helpful to aggregate the data prior to plotting). Describe what you’re plotting, using a definition from the course. Next, plot the relationship between the year of home purchase and the probability of evading taxes, separately for each usable county. (Same hint applies.) Describe what you’re plotting, using a definition from the course. Informed by these plots, write down your preferred regression equation(s) for estimating the causal effect of having a high marginal property tax rate on tax evasion for each county where you think you can recover the correct causal effect. Note that you may need different approaches for different counties. Defend any specification choices you make.  **Word limit: 300 words**
+
+*Answer* 
+Since county SANTA CLARA doesn't meed the RDD assumptions, valid causal effects can be estimated for YOLO and ALAMEDA.
+
+```{r}
+df_yolo <- df %>%
+  filter(county == "YOLO")
+
+df_yolo <- df_yolo %>%
+  mutate(tax_binary = case_when(marginal_property_tax_rate == 50 ~ 1,
+                                marginal_property_tax_rate == 15 ~ 0))
+  
+df_yolo %>%
+  group_by(county, year_of_home_purchase ) %>%
+  summarize(mean_tax = mean(tax_binary)*100,
+            .groups = "keep") %>%
+  ggplot(aes(x = year_of_home_purchase, y = mean_tax, color = as.factor(county))) + 
+  geom_point() +
+  xlab("Year of Home Purchase") +
+  ylab("Probability of having a high marginal tax rate (percent)") +
+  ggtitle("Year of Home Purchase and Probability of having a high marginal tax rate") +
+  guides(color = guide_legend(title = "County")) 
+```
+
+```{r}
+df_alameda <- df %>%
+  filter(county == "ALAMEDA")
+
+df_alameda <- df_alameda %>%
+  mutate(tax_binary = case_when(marginal_property_tax_rate == 50 ~ 1,
+                                marginal_property_tax_rate == 15 ~ 0))
+  
+df_alameda %>%
+  group_by(county, year_of_home_purchase ) %>%
+  summarize(mean_tax = mean(tax_binary)*100,
+            .groups = "keep") %>%
+  ggplot(aes(x = year_of_home_purchase, y = mean_tax, color = as.factor(county))) + 
+  geom_point() +
+  xlab("Year of Home Purchase") +
+  ylab("Probability of having a high marginal tax rate (percent)") +
+  ggtitle("Year of Home Purchase and Probability of having a high marginal tax rate") +
+  guides(color = guide_legend(title = "County")) 
+```
+
+These graphs plot the probability of treatment assignment (high marginal tax rate) on our running variable (year of house purchase) and is called the first stage. We can see that for county YOLO, we are facing a sharp RDD where probability of treatment (high marginal tax rate) is 100% after the cutoff at 1979. With ALAMEDA, we see that we are facing a  fuzzy RDD where probability of treatment (high marginal tax rate) increases after cutoff at 1979. 
+
+
+```{r}
+df_yolo %>%
+  group_by(county, year_of_home_purchase ) %>%
+  summarize(mean_evade = mean(evades_taxes_yn),
+            .groups = "keep") %>%
+  ggplot(aes(x = year_of_home_purchase, y = mean_evade, color = as.factor(county))) + 
+  geom_point() +
+  xlab("Year of Home Purchase") +
+  ylab("Probability of evading taxes (percent)") +
+  ggtitle("Year of Home Purchase and Probability of evading taxes for YOLO") +
+  guides(color = guide_legend(title = "County")) 
+```
+
+```{r}
+df_alameda %>%
+  group_by(county, year_of_home_purchase ) %>%
+  summarize(mean_evade = mean(evades_taxes_yn),
+            .groups = "keep") %>%
+  ggplot(aes(x = year_of_home_purchase, y = mean_evade, color = as.factor(county))) + 
+  geom_point() +
+  xlab("Year of Home Purchase") +
+  ylab("Probability of evading taxes (percent)") +
+  ggtitle("Year of Home Purchase and Probability of evading taxes for ALAMEDA") +
+  guides(color = guide_legend(title = "County")) 
+```
+
+
+These graphs plot the probability of tax evasion outcomes on running variable (year of house purchase) and is called the reduced form. We see that for county YOLO and ALAMEDA, there is a distinct jump in probabilty of tax evasion rates right after the cutoff at 1979.
+
+For county YOLO, since we see a sharp RDD where treatment (high marginal tax rate) probability is 100% after the cutoff, we can use the following regression equation to get $\hat{\tau}$ while allowing for slope differences above/below $c$ since graphs shows evidence of different slopes:
+
+* $Y_i = \alpha + \tau D_i + \beta_1(X_i-c) + \beta_2(X_i-c)D_i + \epsilon_i$ for $c-h \leq X_i \leq c+h$ where h is the chosen bandwidth and $D_i = 1[X_i \geq c]$ and $c=1979$
+
+This equation relies on the assumption that household units around the cutoff $c=1979$ are as good as randomly assigned.
+
+For county ALAMEDA, since we see it is a fuzzy RDD where treatment (high marginal tax rate) probability increases after the cutoff, we have to instead use the following 2SLS regressions to get a estimate of marginal tax rate on tax evasion $\hat{\tau}$ by using the increase in probability of a household getting higher marginal tax rates after 1979 as a instrument.
+
+First stage:
+* $D_i = \alpha + \gamma \cdot 1[X_i \geq c] + \eta_i$ for $c-h \leq X_i \leq c+h$ where $\hat{\gamma}$ measures increase in probability of household getting a higher marginal tax rate from before 1979 to 1979 onwards.
+
+Second stage:
+
+* $Y_i = \alpha + \tau \hat{D_i} + \epsilon_i$ where $\tau$ 
+
+The 2SLS also lets us recover our reduced form
+* $Y_i = \alpha + \theta \cdot 1[X_i \geq c] + \epsilon_i$ 
+
+The 2SLS above relies on assumptions of the sharp RDD but also the first stage, independence, exclusion restriction, monotonicity and covariate smoothness assumptions.
+
+(296 words no math and code)
+
+\newpage
+
+# Question 3.G
+Finally, estimate the causal effect of having a high marginal property tax rate on tax evasion for each county where you think you can recover it correctly. What do you find? Interpret your results. Please note: if you were doing this in the real world, you might want to use a fancy software package. For the purposes of this question, please use lm(), felm() and/or ivreg() for estimation in R. For any county where you do not think you cannot recover the correct causal effect, is there anything you can tell MAROONS anyway? Advise MAROONS: should they advocate increasing the tax rate for all homeowners? **Word limit: 300 words**
+
+*Answer* 
+```{r, warning=FALSE}
+
+# Create treatment dummy for sharp RD
+
+
+df_yolo <- df %>% 
+  filter(county == "YOLO")  %>%
+  mutate(high_tax = ifelse(year_of_home_purchase < 1979, 0,1)) %>% 
+  mutate(tax_binary = case_when(marginal_property_tax_rate == 50 ~ 1,
+                                marginal_property_tax_rate == 15 ~ 0)) %>%
+  mutate(year_of_home_purchase_c = year_of_home_purchase - 1979) %>% # Create centered bweight variable (x-c) 
+  mutate(inter = year_of_home_purchase_c*high_tax) # create interaction term (x-c)D
+```
+
+
+```{r, warning=FALSE}
+# choose bandwidth of 3 years
+df_yolo_76_81 <- df_yolo %>% filter(year_of_home_purchase >= 1976 & year_of_home_purchase <=1981)
+
+df_yolo_76_81 <- lm(evades_taxes_yn ~ high_tax + year_of_home_purchase_c + inter, df_yolo_76_81)
+stargazer(df_yolo_76_81, type = "text", title = "Effect of Higher Marginal Tax on Liklihood of Tax Evasion", column.labels = c("County YOLO"))
+
+```
+
+
+For county YOLO, I run the following regression: $Y_i = \alpha + \tau D_i + \beta_1(X_i-c) + \beta_2(X_i-c)D_i + \epsilon_i$ for $c-h \leq X_i \leq c+h$ where h is 3 years, set so that the data is between years 1976 and 1981 and $D_i = 1[X_i \geq c]$ and $c=1979$. 
+
+I chose a bandwidth of 3 years in order to balance between bias and variance, if $h$ is more than 3 years, there will be more bias since we are moving further away from $c=1979$ however if $h$ is smaller, standard errors will be too large as variance may be high. Interpreting the above results, we can see that by when marginal property tax rates go from 15% to 50%, likelihood of tax evasion increases by 37% significant at the 1% level.
+
+
+```{r, warning=FALSE}
+# Create treatment dummy for fuzzy RD
+
+df_alameda <- df %>% 
+  filter(county == "ALAMEDA")  %>% 
+  mutate(tax_binary = case_when(marginal_property_tax_rate == 50 ~ 1,
+                                marginal_property_tax_rate == 15 ~ 0))
+```
+
+
+```{r, warning=FALSE}
+df_alameda_76_81 <- df_alameda %>% filter(year_of_home_purchase >= 1976 & year_of_home_purchase <=1981)
+iv_reg <- AER::ivreg(evades_taxes_yn ~ tax_binary | year_of_home_purchase, data = df_alameda_76_81)
+
+summary(iv_reg)
+
+```
+
+
+For county ALAMEDA, I choose a bandwidth of 3 years around $c=1979$ for the same reason as above. I run a 2SLS using year of house purchase as a IV for high marginal tax rates with a bandwidth of 3 years. Interpreting the above results, we can see that by when faced with higher marginal property tax rates from 15% to 50%, likelihood of tax evasion increases by 59.776% significant at the 1% level. 
+
+For county SANTA CLARA where we cannot estimate a correct causal effect, we can say that increase in marginal tax rate from 15% to 50% is associated with a increase in tax evasion probability for households. We can also can still give a biased estimate ussing the same method as above. The biased results below show when faced with higher marginal property tax rates from 15% to 50%, likelihood of tax evasion increases by 51.708% significant at the 1% level. 
+
+```{r, warning=FALSE}
+# Create treatment dummy for fuzzy RD
+
+df_sc <- df %>% 
+  filter(county == "SANTA CLARA")  %>% 
+  mutate(tax_binary = case_when(marginal_property_tax_rate == 50 ~ 1,
+                                marginal_property_tax_rate == 15 ~ 0))
+```
+
+```{r}
+df_sc %>%
+  group_by(county, year_of_home_purchase ) %>%
+  summarize(mean_evade = mean(evades_taxes_yn),
+            .groups = "keep") %>%
+  ggplot(aes(x = year_of_home_purchase, y = mean_evade, color = as.factor(county))) + 
+  geom_point() +
+  xlab("Year of Home Purchase") +
+  ylab("Probability of evading taxes (percent)") +
+  ggtitle("Year of Home Purchase and Probability of evading taxes for SANTA CLARA") +
+  guides(color = guide_legend(title = "County")) 
+```
+
+```{r, warning=FALSE}
+df_sc_76_81 <- df_sc %>% filter(year_of_home_purchase >= 1976 & year_of_home_purchase <=1981)
+iv_reg <- AER::ivreg(evades_taxes_yn ~ tax_binary | year_of_home_purchase, data = df_sc_76_81)
+
+summary(iv_reg)
+
+```
+
+MAROONS should not advocate for increasing tax rate for all homeowners if they want to discourage tax evasion, since our data suggests that higher marginal tax rates lead to probability of tax evasion. 
+
+(294 words with no code and math)
+
+
+\newpage
+
+# BONUS QUESTION
+Find an example of a popular press article describing a study using causal language, when, given what you’ve learned in this quarter, this is likely not appropriate. Use a few sentences to describe the study and the main problem of the study through the lens of this course. Attach the article in PDF form to your exam submission. **Word limit: 400 words**
+
+
+
+*Answer* 
+
+The article I chose describes a study of how marijuana use is linked to increased liklihood of schizophrenia using nationwide Danish data. The article notes  cannabis use may be a “component cause,” which interacts with other risk factors, to cause the condition (schizophrenia). Results of the study published by the article state that in 1995, 2% of schizophrenia diagnoses in the country were associated with cannabis use disorder. In 2000, it increased to around 4%. Since 2010, that figure increased to 8%.
+
+The study was based on data from Denmark’s national health registry and included all people in Denmark born before December 31, 2000, who were 16 years or older at some point from January 1, 1972, to December 31, 2016. It looked at people who had a clinical diagnosis for cannabis treatment disorder and measured the rate of schizophrenia in the population. It found that as more people used marijuana over time, schizophrenia rates in the population increased. The issue with this study is that the study observational and it is impossible to untangle the causal effect of marijauna from the effects of selection bias. It is likely that people who are more prone to mental distress are more likely develop mental illness such as schizophrenia but are also more likely to use marijuana excessivley to cope with their symptoms. As such, it is likely that marijuana users who were diagnosed for cannabis treatment disorder are a niche and small subset of the general population who uses marijuana in Denmark given that they received a medical diagnoses for their marijuana use. Therefore the study does not return a causal effect of marijuana use on schizophrenia given that the population in the study suffers from selection bias as they are likely a group of people that were more prone to schizophrenia to begin with. The study also does not consider time varying trends such as the fact that schizophrenia rates among Danish society as a whole may be on the rise in recent years due to increase prominence of social media and its effects on mental health. Such effects would bias the results found in the study in a way that the estimates would not be causal. The article incorrectly uses causal language to describe the effects of marijuana on schizophrenia while the study shows a increasing trend in schizophrenia rates among marijuana users diagnosed with cannabis treatment disorder.  
+
+(399 words)
+
+
+
+
+
+
+
+
+
+
+
+
